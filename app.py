@@ -82,10 +82,10 @@ def add_comprehensive_ratio_features(X: np.ndarray, feature_cols) -> np.ndarray:
     ratio_features.append(Water / (TotalMass + EPS))# WaterFraction
 
     # 5) BF相关（训练代码逻辑：只要有任一样本 BF > 0 就追加这三列）
-    if np.any(BF > EPS):
-        ratio_features.append(BF / (Binder + EPS))            # CoarseAgg/Binder
-        ratio_features.append(Sand / (Sand + BF + EPS))       # Fine/TotalAgg
-        ratio_features.append((Sand + BF) / (Binder + EPS))   # Agg/Binder
+     # 5) BF相关特征（始终添加，保证维度一致）
+    ratio_features.append(BF / (Binder + EPS))            # CoarseAgg/Binder
+    ratio_features.append(Sand / (Sand + BF + EPS))       # Fine/TotalAgg
+    ratio_features.append((Sand + BF) / (Binder + EPS))   # Agg/Binder
 
     ratio_features_array = np.column_stack(ratio_features)
     X_extended = np.hstack([X, ratio_features_array])
