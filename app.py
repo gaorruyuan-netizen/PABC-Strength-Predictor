@@ -129,15 +129,7 @@ st.markdown(
         overflow: hidden;
     }
 
-    /* ===== 自定义卡片 ===== */
-    .custom-card {
-        background-color: #f8fafc;
-        border: 1px solid #d9e2ec;
-        border-radius: 12px;
-        padding: 18px 20px;
-        margin-bottom: 10px;
-    }
-
+    /* ===== intro ===== */
     .intro-text {
         font-size: 1.02rem;
         line-height: 1.75;
@@ -172,7 +164,6 @@ st.markdown(
         margin-top: 0.3rem;
     }
 
-    /* ===== 隐藏部分streamlit默认小元素杂色 ===== */
     small {
         color: #6b7280 !important;
     }
@@ -195,7 +186,7 @@ def load_model():
 model = load_model()
 
 # =========================================================
-# 特征工程
+# 特征工程（保留，但界面不显示）
 # =========================================================
 def transform_temperature(T: np.ndarray, method: str = "divide") -> np.ndarray:
     T = np.asarray(T, dtype=float)
@@ -226,27 +217,21 @@ def add_comprehensive_ratio_features(X: np.ndarray, feature_cols) -> np.ndarray:
 
     ratio_features = []
 
-    # 基础比例
-    ratio_features.append(Water / (Cement + EPS))          # W/C
+    ratio_features.append(Water / (Cement + EPS))
+    ratio_features.append(SA / (Cement + EPS))
+    ratio_features.append(DP / (Cement + EPS))
+    ratio_features.append(HRWR / (Cement + EPS))
+    ratio_features.append(EP / (Sand + EPS))
 
-    # 胶凝体系比例
-    ratio_features.append(SA / (Cement + EPS))             # SA/Cement
-    ratio_features.append(DP / (Cement + EPS))             # DP/Cement
-    ratio_features.append(HRWR / (Cement + EPS))           # HRWR/Cement
-    ratio_features.append(EP / (Sand + EPS))               # EP/Sand
+    ratio_features.append(Water / (Binder + EPS))
+    ratio_features.append(Sand / (Binder + EPS))
 
-    # Binder相关
-    ratio_features.append(Water / (Binder + EPS))          # Water/Binder
-    ratio_features.append(Sand / (Binder + EPS))           # Sand/Binder
+    ratio_features.append(TotalMass)
+    ratio_features.append(Water / (TotalMass + EPS))
 
-    # 总量相关
-    ratio_features.append(TotalMass)                       # TotalMass
-    ratio_features.append(Water / (TotalMass + EPS))       # WaterFraction
-
-    # BF相关（始终保留，保证维度固定）
-    ratio_features.append(BF / (Binder + EPS))             # CoarseAgg/Binder
-    ratio_features.append(Sand / (Sand + BF + EPS))        # Fine/TotalAgg
-    ratio_features.append((Sand + BF) / (Binder + EPS))    # Agg/Binder
+    ratio_features.append(BF / (Binder + EPS))
+    ratio_features.append(Sand / (Sand + BF + EPS))
+    ratio_features.append((Sand + BF) / (Binder + EPS))
 
     ratio_features_array = np.column_stack(ratio_features)
     X_extended = np.hstack([X, ratio_features_array])
@@ -310,15 +295,13 @@ st.markdown(
 )
 
 # =========================================================
-# 侧边栏
+# 侧边栏（去掉 Temperature transform 和 Extra engineering）
 # =========================================================
 with st.sidebar:
     st.header("Model Information")
     st.write("**Model:** LightGBM")
     st.write("**Target:** Compressive Strength")
     st.write("**Input variables:** 9 raw features")
-    st.write("**Temperature transform:** T / 800")
-    st.write("**Extra engineering:** ratio + nonlinear temperature features")
 
     st.header("Notes")
     st.write("- All mixture quantities use the same unit as the training data.")
@@ -326,46 +309,28 @@ with st.sidebar:
     st.write("- Prediction output unit: MPa")
 
 # =========================================================
-# 主界面
+# 主界面（去掉 Engineering Description）
 # =========================================================
-col1, col2 = st.columns([1.35, 1], gap="large")
+st.subheader("Input Parameters")
 
-with col1:
-    st.subheader("Input Parameters")
+c1, c2, c3 = st.columns(3)
+with c1:
+    cement = st.number_input("Cement (g)", min_value=0.0, value=250.0, step=1.0)
+    sa = st.number_input("SA (g)", min_value=0.0, value=20.0, step=1.0)
+    hrwr = st.number_input("HRWR (g)", min_value=0.0, value=5.0, step=0.1)
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        cement = st.number_input("Cement (g)", min_value=0.0, value=250.0, step=1.0)
-        sa = st.number_input("SA (g)", min_value=0.0, value=20.0, step=1.0)
-        hrwr = st.number_input("HRWR (g)", min_value=0.0, value=5.0, step=0.1)
+with c2:
+    sand = st.number_input("Sand (g)", min_value=0.0, value=180.0, step=1.0)
+    ep = st.number_input("EP (g)", min_value=0.0, value=15.0, step=1.0)
+    dp = st.number_input("DP (g)", min_value=0.0, value=10.0, step=1.0)
 
-    with c2:
-        sand = st.number_input("Sand (g)", min_value=0.0, value=180.0, step=1.0)
-        ep = st.number_input("EP (g)", min_value=0.0, value=15.0, step=1.0)
-        dp = st.number_input("DP (g)", min_value=0.0, value=10.0, step=1.0)
+with c3:
+    water = st.number_input("Water (g)", min_value=0.0, value=125.0, step=1.0)
+    bf = st.number_input("BF (g)", min_value=0.0, value=0.0, step=1.0)
+    t = st.number_input("Temperature (°C)", min_value=0.0, value=20.0, step=1.0)
 
-    with c3:
-        water = st.number_input("Water (g)", min_value=0.0, value=125.0, step=1.0)
-        bf = st.number_input("BF (g)", min_value=0.0, value=0.0, step=1.0)
-        t = st.number_input("Temperature (°C)", min_value=0.0, value=20.0, step=1.0)
-
-    st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
-    predict_button = st.button("Predict Compressive Strength", use_container_width=True)
-
-with col2:
-    st.subheader("Engineering Description")
-    st.markdown(
-        """
-        <div class="custom-card">
-        The deployed interface integrates the trained LightGBM model with the same
-        feature-engineering procedures adopted during model development, including
-        temperature normalization, ratio-based feature construction, and nonlinear
-        temperature expansion. This ensures prediction consistency between the
-        offline training stage and the online application stage.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
+predict_button = st.button("Predict Compressive Strength", use_container_width=True)
 
 # =========================================================
 # 预测结果
